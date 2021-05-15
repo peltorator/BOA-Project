@@ -136,10 +136,64 @@ ParetoSet BDijkstra(const int n, const Graph& graph, const int source, const int
             }
         }
     }
-
     return paretoSets[target];
 }
 
+ParetoSet BBDijkstra(const int n, const Graph& graph, const Graph& revGraph, const int source, const int target) {
+    std::priority_queue<Node, std::vector<Node>, std::greater<Node>> openSetLeft;
+    std::priority_queue<Node, std::vector<Node>, std::greater<Node>> openSetRight;
+    openSetLeft.push(Node(source, Distance(0, 0)));
+    openSetRight.push(Node(target, Distance(0, 0)));
+    std::vector<ParetoSet> paretoSetsLeft(n), paretoSetsRight(n);
+    paretoSetsLeft[source].add(Distance(0, 0));
+    paretoSetsRight[target].add(Distance(0, 0));
+
+    ParetoSet ans;
+
+    for (int iteration = 0; !openSetLeft.empty() || !openSetRight.empty(); iteration++) {        
+        if (iteration % 2 == 0 && !openSetLeft.empty()) {
+            Node curNodeLeft = openSetLeft.top();
+            int vleft = curNodeLeft.index;
+            Distance curDistLeft = curNodeLeft.dist;
+            openSetLeft.pop();
+            if (paretoSetsLeft[vleft].strictlyDominates(curDistLeft) || ans.dominates(curDistLeft)) {
+                continue;
+            }
+            for (const Distance& rightDist : paretoSetsRight[vleft].paretoSet) {
+                ans.add(curDistLeft + rightDist);
+            }
+            for (const Edge& e : graph.getVertexAdjacencyList(vleft)) {
+                Distance newDist = curDistLeft + e.cost;
+                int u = e.to;
+                if (!paretoSetsLeft[u].dominates(newDist) && !ans.dominates(newDist)) {
+                    paretoSetsLeft[u].add(newDist);
+                    openSetLeft.push(Node(u, newDist));
+                }
+            }
+        } else {
+            Node curNodeRight = openSetRight.top();
+            int vright = curNodeRight.index;
+            Distance curDistRight = curNodeRight.dist;
+            openSetRight.pop();
+            if (paretoSetsRight[vright].strictlyDominates(curDistRight) || ans.dominates(curDistRight)) {
+                continue;
+            }
+            for (const Distance& leftDist : paretoSetsLeft[vright].paretoSet) {
+                ans.add(curDistRight + leftDist);
+            }
+            for (const Edge& e : revGraph.getVertexAdjacencyList(vright)) {
+                Distance newDist = curDistRight + e.cost;
+                int u = e.to;
+                if (!paretoSetsRight[u].dominates(newDist) && !ans.dominates(newDist)) {
+                    paretoSetsRight[u].add(newDist);
+                    openSetRight.push(Node(u, newDist));
+                }
+            }
+        }
+    }
+    return ans;
+}
+ 
 int main() {
     int n, m;
     std::cin >> n >> m;
@@ -148,19 +202,27 @@ int main() {
     source--;
     target--;
 
-    Graph graph(n);
+    Graph graph(n), revGraph(n);
     for (int i = 0; i < m; i++) {
         int from, to, time, length;
         std::cin >> from >> to >> time >> length;
         from--;
         to--;
         graph.addEdge(Edge(from, to, Distance(time, length)));
+        revGraph.addEdge(Edge(to, from, Distance(time, length)));
     }
 
-    ParetoSet ans = BDijkstra(n, graph, source, target);
+    ParetoSet ansBDijkstra = BDijkstra(n, graph, source, target);
+    ParetoSet ansBBDijkstra = BBDijkstra(n, graph, revGraph, source, target);
 
-    std::cout << "Optimal distances:\n";
-    for (const Distance& dist : ans.paretoSet) {
+    std::cout << "Optimal distances for BDijstra:\n";
+    for (const Distance& dist : ansBDijkstra.paretoSet) {
         std::cout << dist.time << " " << dist.length << '\n';
     }
+
+    std::cout << "\nOptimal distances for BBDijstra:\n";
+    for (const Distance& dist : ansBBDijkstra.paretoSet) {
+        std::cout << dist.time << " " << dist.length << '\n';
+    }
+
 }
