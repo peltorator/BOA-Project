@@ -124,13 +124,13 @@ ParetoSet BDijkstra(const int n, const Graph& graph, const int source, const int
         int v = curNode.index;
         Distance curDist = curNode.dist;
         openSet.pop();
-        if (paretoSets[v].strictlyDominates(curDist)) {
+        if (paretoSets[v].strictlyDominates(curDist) || paretoSets[target].dominates(curDist)) {
             continue;
         }
         for (const Edge& e : graph.getVertexAdjacencyList(v)) {
             Distance newDist = curDist + e.cost;
             int u = e.to;
-            if (!paretoSets[u].dominates(newDist)) {
+            if (!paretoSets[u].dominates(newDist) && !paretoSets[target].dominates(newDist)) {
                 paretoSets[u].add(newDist);
                 openSet.push(Node(u, newDist));
             }
