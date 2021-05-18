@@ -113,8 +113,14 @@ struct Node {
     }
 };
 
+struct NodeComparator {
+    bool operator() (const Node& first, const Node& second) const {
+        return std::make_pair(first.dist.time, first.dist.length) < std::make_pair(second.dist.time, second.dist.length);
+    }
+};
+
 ParetoSet BDijkstra(const int n, const Graph& graph, const int source, const int target) {
-    std::priority_queue<Node, std::vector<Node>, std::greater<Node>> openSet;
+    std::priority_queue<Node, std::vector<Node>, NodeComparator> openSet;
     openSet.push(Node(source, Distance(0, 0)));
     std::vector<ParetoSet> paretoSets(n);
     paretoSets[source].add(Distance(0, 0));
@@ -140,8 +146,8 @@ ParetoSet BDijkstra(const int n, const Graph& graph, const int source, const int
 }
 
 ParetoSet BBDijkstra(const int n, const Graph& graph, const Graph& revGraph, const int source, const int target) {
-    std::priority_queue<Node, std::vector<Node>, std::greater<Node>> openSetLeft;
-    std::priority_queue<Node, std::vector<Node>, std::greater<Node>> openSetRight;
+    std::priority_queue<Node, std::vector<Node>, NodeComparator> openSetLeft;
+    std::priority_queue<Node, std::vector<Node>, NodeComparator> openSetRight;
     openSetLeft.push(Node(source, Distance(0, 0)));
     openSetRight.push(Node(target, Distance(0, 0)));
     std::vector<ParetoSet> paretoSetsLeft(n), paretoSetsRight(n);
