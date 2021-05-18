@@ -96,7 +96,7 @@ struct Node {
 
 struct NodeComparator {
     bool operator() (const Node& first, const Node& second) const {
-        return std::make_pair(first.dist.f1, first.dist.f2) < std::make_pair(second.dist.f1, second.dist.f2);
+        return std::make_pair(first.dist.f1, first.dist.f2) > std::make_pair(second.dist.f1, second.dist.f2);
     }
 };
 
@@ -106,7 +106,7 @@ ParetoSet BOAStar(const int n, const Graph& graph, const int source, const int t
     std::priority_queue<Node, std::vector<Node>, NodeComparator> openSet;
     openSet.push(Node(source, Distance(0, h1(source), 0, h2(source))));
     std::vector<ParetoSet> paretoSets(n);
-    paretoSets[source].add(Distance(0, h1(source), 0, h2(source)));
+    //paretoSets[source].add(Distance(0, h1(source), 0, h2(source)));
 
     while (!openSet.empty()) {
         Node curNode = openSet.top();
