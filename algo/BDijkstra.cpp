@@ -115,7 +115,7 @@ struct Node {
 
 struct NodeComparator {
     bool operator() (const Node& first, const Node& second) const {
-        return std::make_pair(first.dist.time, first.dist.length) < std::make_pair(second.dist.time, second.dist.length);
+        return std::make_pair(first.dist.time, first.dist.length) > std::make_pair(second.dist.time, second.dist.length);
     }
 };
 
@@ -207,6 +207,11 @@ int main() {
     std::cin >> source >> target;
     source--;
     target--;
+
+    for (int i = 0; i < n; i++) {
+        int x, y;
+        std::cin >> x >> y;
+    }
 
     Graph graph(n), revGraph(n);
     for (int i = 0; i < m; i++) {
