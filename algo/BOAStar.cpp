@@ -134,6 +134,10 @@ std::string GetMapName() {
     return mapName;
 }
 
+double GetCurTime() {
+    return clock() * 1.0 / CLOCKS_PER_SEC;
+}
+
 int main() {
     std::string mapName = "NY";// GetMapName();
     
@@ -181,27 +185,33 @@ int main() {
         long double dx = a.first - b.first;
         long double dy = a.second - b.second;
         return floor(sqrtl(dx * dx + dy * dy) / maxmult);
-        //return std::max(a.first - b.first, a.second - b.second);
+        //return std::max(a.first - b.first, a.second - b.second) / maxmult;
     };
     auto h2 = [&](std::pair<int, int> a, std::pair<int, int> b) -> int {
-        //return 0;
         return h1(a, b) / maxspeed;
     };
 
+    const int TESTCASES = 100;
     std::mt19937 rnd(1234);
-    int source = rnd() % n, target = rnd() % n;
-    //int source = 0, target = 1000;
-
-    std::cerr << "Starting BOAStar search" << std::endl;
-    double startTime = clock() * 1.0 / CLOCKS_PER_SEC;
-    ParetoSet ansBOAStar = BOAStar(n, graph, source, target, coordinates, h1, h2);
-    std::cerr << "Work time = " << clock() * 1.0 / CLOCKS_PER_SEC - startTime << std::endl;
-
     std::ofstream outp("results/" + mapName + "/BOAStar.txt");
-    ansBOAStar.paretoSet.sort();
-    outp << "Optimal set for path from " << source + 1 << " to " << target + 1 << '\n';
-    for (const std::pair<int, int>& dist : ansBOAStar.paretoSet) {
-        outp << dist.second << " " << dist.first << '\n';
+    long double sumTime = 0;
+    for (int i = 0; i < TESTCASES; i++) {
+        int source = rnd() % n, target = rnd() % n;
+        std::cerr << "Starting BOAStar search. Test #" << i + 1 << std::endl;
+        double startTime = GetCurTime();
+        ParetoSet ansBOAStar = BOAStar(n, graph, source, target, coordinates, h1, h2);
+
+        double workTime = GetCurTime() - startTime;
+        std::cerr << "Work time = " << workTime << std::endl;
+        sumTime += workTime;
+        std::cerr << "Current average time per task: " << sumTime / (i + 1) << std::endl;
+
+        ansBOAStar.paretoSet.sort();
+        outp << "Optimal set for path from " << source + 1 << " to " << target + 1 << '\n';
+        for (const std::pair<int, int>& dist : ansBOAStar.paretoSet) {
+            outp << dist.second << " " << dist.first << '\n';
+        }
+        outp << "\n\n\n";
     }
-    outp << "\n\n\n";
+    std::cerr << "Final average time per task: " << sumTime / TESTCASES << std::endl;
 }
