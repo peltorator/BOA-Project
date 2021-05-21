@@ -128,44 +128,80 @@ ParetoSet BOAStar(const int n, const Graph& graph, const int source, const int t
     return paretoSets[target];
 }
 
-int main() {
-    int n, m;
-    std::cin >> n >> m;
-    int source, target;
-    std::cin >> source >> target;
-    source--;
-    target--;
+std::string GetMapName() {
+    std::string mapName;
+    std::cin >> mapName;
+    return mapName;
+}
 
+int main() {
+    std::string mapName = "NY";// GetMapName();
+    
+    std::ifstream coordf("maps/" + mapName + "/coordinates.txt");
+    std::ifstream distf("maps/" + mapName + "/distances.txt");
+    std::ifstream timef("maps/" + mapName + "/time.txt");
+
+    int n;
+    coordf >> n;
     std::vector<std::pair<int, int>> coordinates(n);
     for (int i = 0; i < n; i++) {
-        std::cin >> coordinates[i].first >> coordinates[i].second;
+        int index;
+        coordf >> index;
+        index--;
+        assert(index == i);
+        coordf >> coordinates[index].first >> coordinates[index].second;
     }
 
-    Graph graph(n), revGraph(n);
-    double maxspeed = 0;
+    Graph graph(n);
+    long double maxspeed = 0;
+    long double maxmult = 0;
+
+    int m;
+    distf >> m;
     for (int i = 0; i < m; i++) {
-        int from, to, time, length;
-        std::cin >> from >> to >> time >> length;
+        int from, to, length;
+        distf >> from >> to >> length;
+        int from2, to2, time;
+        timef >> from2 >> to2 >> time;
+        assert(from2 == from && to2 == to);
+
         from--;
         to--;
+        long long dx = coordinates[from].first - coordinates[to].first;
+        long long dy = coordinates[from].second - coordinates[to].second;
+        if (length != 0) {
+            maxmult = std::max(maxmult, sqrtl(dx * dx + dy * dy) / static_cast<long double>(length));
+        }
         if (time != 0) {
-            maxspeed = std::max(maxspeed, static_cast<double>(length) / static_cast<double>(time));
+            maxspeed = std::max(maxspeed, static_cast<long double>(length) / static_cast<long double>(time));
         }
         graph.addEdge(Edge(from, to, {time, length}));
-        revGraph.addEdge(Edge(to, from, {time, length}));
     }
     auto h1 = [&](std::pair<int, int> a, std::pair<int, int> b) -> int {
-        return sqrt(pow(a.first - b.first, 2) + pow(a.second - b.second, 2));
+        long double dx = a.first - b.first;
+        long double dy = a.second - b.second;
+        return floor(sqrtl(dx * dx + dy * dy) / maxmult);
+        //return std::max(a.first - b.first, a.second - b.second);
     };
     auto h2 = [&](std::pair<int, int> a, std::pair<int, int> b) -> int {
+        //return 0;
         return h1(a, b) / maxspeed;
     };
 
+    std::mt19937 rnd(1234);
+    int source = rnd() % n, target = rnd() % n;
+    //int source = 0, target = 1000;
+
+    std::cerr << "Starting BOAStar search" << std::endl;
+    double startTime = clock() * 1.0 / CLOCKS_PER_SEC;
     ParetoSet ansBOAStar = BOAStar(n, graph, source, target, coordinates, h1, h2);
+    std::cerr << "Work time = " << clock() * 1.0 / CLOCKS_PER_SEC - startTime << std::endl;
 
-    std::cout << "\nOptimal distances for BOAStar:\n";
+    std::ofstream outp("results/" + mapName + "/BOAStar.txt");
+    ansBOAStar.paretoSet.sort();
+    outp << "Optimal set for path from " << source + 1 << " to " << target + 1 << '\n';
     for (const std::pair<int, int>& dist : ansBOAStar.paretoSet) {
-        std::cout << dist.first << " " << dist.second << '\n';
+        outp << dist.second << " " << dist.first << '\n';
     }
-
+    outp << "\n\n\n";
 }
