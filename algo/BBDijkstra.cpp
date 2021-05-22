@@ -1,10 +1,10 @@
 #include <bits/stdc++.h>
 
 struct Distance {
-    int time;
-    int length;
+    long long time;
+    long long length;
 
-    Distance(const int time, const int length): time(time), length(length) {}
+    Distance(const long long time, const long long length): time(time), length(length) {}
 
     Distance(): time(0), length(0) {}
 
@@ -189,9 +189,11 @@ int main() {
     int m;
     distf >> m;
     for (int i = 0; i < m; i++) {
-        int from, to, length;
+        int from, to;
+        long long length;
         distf >> from >> to >> length;
-        int from2, to2, time;
+        int from2, to2;
+        long long time;
         timef >> from2 >> to2 >> time;
         assert(from2 == from && to2 == to);
 

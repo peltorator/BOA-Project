@@ -1,14 +1,14 @@
 #include <bits/stdc++.h>
 
 struct Distance {
-    int g1;
-    int h1;
-    int f1;
-    int g2;
-    int h2;
-    int f2;
+    long long g1;
+    long long h1;
+    long long f1;
+    long long g2;
+    long long h2;
+    long long f2;
 
-    Distance(const int g1, const int h1, const int g2, const int h2): g1(g1), h1(h1), f1(g1 + h1), g2(g2), h2(h2), f2(g2 + h2) {}
+    Distance(const long long g1, const long long h1, const long long g2, const long long h2): g1(g1), h1(h1), f1(g1 + h1), g2(g2), h2(h2), f2(g2 + h2) {}
 
     Distance(): g1(0), h1(0), f1(0), g2(0), h2(0), f2(0) {}
 
@@ -30,10 +30,10 @@ struct Distance {
 };
 
 struct ParetoSet {
-    std::list<std::pair<int, int>> paretoSet;
-    int g2min = std::numeric_limits<int>::max();
+    std::list<std::pair<long long, long long>> paretoSet;
+    long long g2min = std::numeric_limits<long long>::max();
 
-    bool dominates(const int val) const {
+    bool dominates(const long long val) const {
         return g2min <= val;
     }
 
@@ -48,9 +48,9 @@ struct ParetoSet {
 struct Edge {
     int from;
     int to;
-    std::pair<int, int> cost;
+    std::pair<long long, long long> cost;
 
-    Edge(const int from, const int to, const std::pair<int, int>& cost): from(from), to(to), cost(cost) {}
+    Edge(const int from, const int to, const std::pair<long long, long long>& cost): from(from), to(to), cost(cost) {}
 };
 
 struct Graph {
@@ -157,9 +157,11 @@ int main() {
     int m;
     distf >> m;
     for (int i = 0; i < m; i++) {
-        int from, to, length;
+        int from, to;
+        long long length;
         distf >> from >> to >> length;
-        int from2, to2, time;
+        int from2, to2;
+        long long time;
         timef >> from2 >> to2 >> time;
         assert(from2 == from && to2 == to);
 
@@ -177,26 +179,27 @@ int main() {
     }
     distf.close();
     timef.close();
-    std::string heuristicName = "euclid";
-    //std::string heuristicName = "no_heurist";
+    //std::string heuristicName = "euclid";
+    std::string heuristicName = "no_heurist";
     //std::string heuristicName = "chebyshev";
 
     auto h1 = [&](std::pair<int, int> a, std::pair<int, int> b) -> int {
-        //return 0;
-        long double dx = a.first - b.first;
-        long double dy = a.second - b.second;
-        return floor(sqrtl(dx * dx + dy * dy) / maxmult);
+        return 0;
+        //long double dx = a.first - b.first;
+        //long double dy = a.second - b.second;
+        //return floor(sqrtl(dx * dx + dy * dy) / maxmult);
         //return std::max(a.first - b.first, a.second - b.second) / maxmult;
     };
     auto h2 = [&](std::pair<int, int> a, std::pair<int, int> b) -> int {
         return h1(a, b) / maxspeed;
     };
 
-    const int TESTCASES = 1;
+    const int TESTCASES = 100;
     std::mt19937 rnd(1234);
     std::ofstream outp("results/" + mapName + "/BOAStar_" + heuristicName + ".txt");
     long double sumTime = 0;
     long long sumAnsSize = 0;
+    std::vector<double> times;
     for (int i = 0; i < TESTCASES; i++) {
         int source = rnd() % n, target = rnd() % n;
         std::cerr << "Starting BOAStar search. Map: " << mapName << ", Heuristic: " << heuristicName << " Test #" << i + 1 << std::endl;
@@ -204,6 +207,7 @@ int main() {
         ParetoSet ansBOAStar = BOAStar(n, graph, source, target, coordinates, h1, h2);
 
         double workTime = GetCurTime() - startTime;
+        times.push_back(workTime);
         std::cerr << "Current task work time = " << workTime << std::endl;
         sumTime += workTime;
         sumAnsSize += ansBOAStar.paretoSet.size();
@@ -217,7 +221,14 @@ int main() {
         }
         outp << "\n\n\n";
     }
+    std::sort(times.begin(), times.end());
     std::cerr << "\n\nResults for BOAStar with heuristic '" << heuristicName << "' on map '" << mapName << "'\n";
     std::cerr << "Final average time per task: " << sumTime / TESTCASES << std::endl;
+    std::cerr << "Min time per task: " << times[0] << std::endl;
+    std::cerr << "Max time per task: " << times.back() << std::endl;
+    std::cerr << "Median time per task: " << times[TESTCASES / 2] << std::endl;
+    std::cerr << "95 time percentile: " << times[TESTCASES * 0.95] << std::endl;
+    std::cerr << "90 time percentile: " << times[TESTCASES * 0.9] << std::endl;
+    std::cerr << "80 time percentile: " << times[TESTCASES * 0.8] << std::endl;
     std::cerr << "Final average Pareto set size per task: " << sumAnsSize / TESTCASES << " (sum of sizes is " << sumAnsSize << ")" << std::endl;
 }
