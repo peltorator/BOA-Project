@@ -170,32 +170,22 @@ ParetoSet BBDijkstra(const int n, const Graph& graph, const Graph& revGraph, con
     return ans;
 }
 
-std::string GetMapName() {
-    std::string mapName;
-    std::cin >> mapName;
-    return mapName;
+double GetCurTime() {
+    return clock() * 1.0 / CLOCKS_PER_SEC;
 }
  
 int main() {
-    std::string mapName = "NY";// GetMapName();
+    std::string mapName = "BAY";
     
-    std::ifstream coordf("maps/" + mapName + "/coordinates.txt");
-    std::ifstream distf("maps/" + mapName + "/distances.txt");
-    std::ifstream timef("maps/" + mapName + "/time.txt");
-
+    std::ifstream coordf("maps/" + mapName + "/coordinates.txt"); 
     int n;
     coordf >> n;
-    std::vector<std::pair<int, int>> coordinates(n);
-    for (int i = 0; i < n; i++) {
-        int index;
-        coordf >> index;
-        index--;
-        assert(index == i);
-        coordf >> coordinates[index].first >> coordinates[index].second;
-    }
+    coordf.close();
 
     Graph graph(n), revGraph(n);
 
+    std::ifstream distf("maps/" + mapName + "/distances.txt");
+    std::ifstream timef("maps/" + mapName + "/time.txt");
     int m;
     distf >> m;
     for (int i = 0; i < m; i++) {
@@ -207,24 +197,39 @@ int main() {
 
         from--;
         to--;
-        graph.addEdge(Edge(from, to, {time, length}));
-        revGraph.addEdge(Edge(to, from, {time, length}));
+        graph.addEdge(Edge(from, to, {length, time}));
+        revGraph.addEdge(Edge(to, from, {length, time}));
     }
+    distf.close();
+    timef.close();
 
+    const int TESTCASES = 10;
     std::mt19937 rnd(1234);
-    int source = rnd() % n, target = rnd() % n;
-    //int source = 0, target = 1000;
-
-    std::cerr << "Starting BBDijkstra search" << std::endl;
-    double startTime = clock() * 1.0 / CLOCKS_PER_SEC;
-    ParetoSet ansBBDijkstra = BBDijkstra(n, graph, revGraph, source, target);
-    std::cerr << "Work time = " << clock() * 1.0 / CLOCKS_PER_SEC - startTime << std::endl;
- 
     std::ofstream outp("results/" + mapName + "/BBDijkstra.txt");
-    ansBBDijkstra.paretoSet.sort();
-    outp << "Optimal set for path from " << source + 1 << " to " << target + 1 << '\n';
-    for (const Distance& dist : ansBBDijkstra.paretoSet) {
-        outp << dist.length << " " << dist.time << '\n';
+    long double sumTime = 0;
+    long long sumAnsSize = 0;
+    for (int i = 0; i < TESTCASES; i++) {
+        int source = rnd() % n, target = rnd() % n;
+        std::cerr << "Starting BBDijkstra search. Map: " << mapName << " Test #" << i + 1 << std::endl;
+        double startTime = GetCurTime();
+        ParetoSet ansBBDijkstra = BBDijkstra(n, graph, revGraph, source, target);
+
+        double workTime = GetCurTime() - startTime;
+        std::cerr << "Current task work time = " << workTime << std::endl;
+        sumTime += workTime;
+        sumAnsSize += ansBBDijkstra.paretoSet.size();
+        std::cerr << "Current average time per task: " << sumTime / (i + 1) << std::endl;
+        std::cerr << "Current average Pareto set size per task: " << sumAnsSize / (i + 1) << std::endl;
+
+        ansBBDijkstra.paretoSet.sort();
+        outp << "Optimal set for path from " << source + 1 << " to " << target + 1 << '\n';
+        for (const Distance& dist : ansBBDijkstra.paretoSet) {
+            outp << dist.length << " " << dist.time << '\n';
+        }
+        outp << "\n\n\n";
     }
-    outp << "\n\n\n";
+    std::cerr << "\n\nResults for BBDijkstra on map '" << mapName << "'\n";
+    std::cerr << "Final average time per task: " << sumTime / TESTCASES << std::endl;
+    std::cerr << "Final average Pareto set size per task: " << sumAnsSize / TESTCASES << " (sum of sizes is " << sumAnsSize << ")" << std::endl;
+
 }

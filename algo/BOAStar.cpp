@@ -106,7 +106,6 @@ ParetoSet BOAStar(const int n, const Graph& graph, const int source, const int t
     std::priority_queue<Node, std::vector<Node>, NodeComparator> openSet;
     openSet.push(Node(source, Distance(0, h1(source), 0, h2(source))));
     std::vector<ParetoSet> paretoSets(n);
-    //paretoSets[source].add(Distance(0, h1(source), 0, h2(source)));
 
     while (!openSet.empty()) {
         Node curNode = openSet.top();
@@ -128,22 +127,14 @@ ParetoSet BOAStar(const int n, const Graph& graph, const int source, const int t
     return paretoSets[target];
 }
 
-std::string GetMapName() {
-    std::string mapName;
-    std::cin >> mapName;
-    return mapName;
-}
-
 double GetCurTime() {
     return clock() * 1.0 / CLOCKS_PER_SEC;
 }
 
 int main() {
-    std::string mapName = "NY";// GetMapName();
+    std::string mapName = "NY";
     
-    std::ifstream coordf("maps/" + mapName + "/coordinates.txt");
-    std::ifstream distf("maps/" + mapName + "/distances.txt");
-    std::ifstream timef("maps/" + mapName + "/time.txt");
+    std::ifstream coordf("maps/" + mapName + "/coordinates.txt"); 
 
     int n;
     coordf >> n;
@@ -155,11 +146,14 @@ int main() {
         assert(index == i);
         coordf >> coordinates[index].first >> coordinates[index].second;
     }
+    coordf.close();
 
     Graph graph(n);
     long double maxspeed = 0;
     long double maxmult = 0;
 
+    std::ifstream distf("maps/" + mapName + "/distances.txt");
+    std::ifstream timef("maps/" + mapName + "/time.txt");
     int m;
     distf >> m;
     for (int i = 0; i < m; i++) {
@@ -179,9 +173,16 @@ int main() {
         if (time != 0) {
             maxspeed = std::max(maxspeed, static_cast<long double>(length) / static_cast<long double>(time));
         }
-        graph.addEdge(Edge(from, to, {time, length}));
+        graph.addEdge(Edge(from, to, {length, time}));
     }
+    distf.close();
+    timef.close();
+    std::string heuristicName = "euclid";
+    //std::string heuristicName = "no_heurist";
+    //std::string heuristicName = "chebyshev";
+
     auto h1 = [&](std::pair<int, int> a, std::pair<int, int> b) -> int {
+        //return 0;
         long double dx = a.first - b.first;
         long double dy = a.second - b.second;
         return floor(sqrtl(dx * dx + dy * dy) / maxmult);
@@ -191,27 +192,32 @@ int main() {
         return h1(a, b) / maxspeed;
     };
 
-    const int TESTCASES = 100;
+    const int TESTCASES = 1;
     std::mt19937 rnd(1234);
-    std::ofstream outp("results/" + mapName + "/BOAStar.txt");
+    std::ofstream outp("results/" + mapName + "/BOAStar_" + heuristicName + ".txt");
     long double sumTime = 0;
+    long long sumAnsSize = 0;
     for (int i = 0; i < TESTCASES; i++) {
         int source = rnd() % n, target = rnd() % n;
-        std::cerr << "Starting BOAStar search. Test #" << i + 1 << std::endl;
+        std::cerr << "Starting BOAStar search. Map: " << mapName << ", Heuristic: " << heuristicName << " Test #" << i + 1 << std::endl;
         double startTime = GetCurTime();
         ParetoSet ansBOAStar = BOAStar(n, graph, source, target, coordinates, h1, h2);
 
         double workTime = GetCurTime() - startTime;
-        std::cerr << "Work time = " << workTime << std::endl;
+        std::cerr << "Current task work time = " << workTime << std::endl;
         sumTime += workTime;
+        sumAnsSize += ansBOAStar.paretoSet.size();
         std::cerr << "Current average time per task: " << sumTime / (i + 1) << std::endl;
+        std::cerr << "Current average Pareto set size per task: " << sumAnsSize / (i + 1) << std::endl;
 
         ansBOAStar.paretoSet.sort();
         outp << "Optimal set for path from " << source + 1 << " to " << target + 1 << '\n';
         for (const std::pair<int, int>& dist : ansBOAStar.paretoSet) {
-            outp << dist.second << " " << dist.first << '\n';
+            outp << dist.first << " " << dist.second << '\n';
         }
         outp << "\n\n\n";
     }
+    std::cerr << "\n\nResults for BOAStar with heuristic '" << heuristicName << "' on map '" << mapName << "'\n";
     std::cerr << "Final average time per task: " << sumTime / TESTCASES << std::endl;
+    std::cerr << "Final average Pareto set size per task: " << sumAnsSize / TESTCASES << " (sum of sizes is " << sumAnsSize << ")" << std::endl;
 }
