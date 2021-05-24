@@ -146,9 +146,7 @@ double GetCurTime() {
     return clock() * 1.0 / CLOCKS_PER_SEC;
 }
  
-int main() {
-    std::string mapName = "NY";
-    
+void solveForMap(std::string mapName, std::ofstream& res) {
     std::ifstream coordf("maps/" + mapName + "/coordinates.txt");
  
     int n;
@@ -177,18 +175,23 @@ int main() {
     distf.close();
     timef.close();
 
-    const int TESTCASES = 1;
+    const int TESTCASES = 40;
     std::mt19937 rnd(1234);
     std::ofstream outp("results/" + mapName + "/BDijkstra.txt");
+    std::ofstream runtimes("results/" + mapName + "/BDijkstra_runtimes.txt");
     long double sumTime = 0;
     long long sumAnsSize = 0;
+    std::vector<double> times;
     for (int i = 0; i < TESTCASES; i++) {
-        int source = rnd() % n, target = rnd() % n;
+        //int source = rnd() % n, target = rnd() % n;
+        int source = rnd() % (n - 2000) + 1000, target = source + rnd() % 2000 - 1000;
         std::cerr << "Starting BDijkstra search. Map: " << mapName << " Test #" << i + 1 << std::endl;
         double startTime = GetCurTime();
         ParetoSet ansBDijkstra = BDijkstra(n, graph, source, target);
 
         double workTime = GetCurTime() - startTime;
+        times.push_back(workTime);
+        runtimes << i << ' ' << workTime << '\n';
         std::cerr << "Current task work time = " << workTime << std::endl;
         sumTime += workTime;
         sumAnsSize += ansBDijkstra.paretoSet.size();
@@ -202,8 +205,21 @@ int main() {
         }
         outp << "\n\n\n";
     }
-    std::cerr << "\n\nResults for BDijkstra on map '" << mapName << "'\n";
-    std::cerr << "Final average time per task: " << sumTime / TESTCASES << std::endl;
-    std::cerr << "Final average Pareto set size per task: " << sumAnsSize / TESTCASES << " (sum of sizes is " << sumAnsSize << ")" << std::endl;
+    std::sort(times.begin(), times.end());
+    res << "\n\nResults for BDijkstra on map '" << mapName << "'\n";
+    res << "Final average time per task: " << sumTime / TESTCASES << std::endl;
+    res << "Min time per task: " << times[0] << std::endl;
+    res << "Max time per task: " << times.back() << std::endl;
+    res << "Median time per task: " << times[TESTCASES / 2] << std::endl;
+    res << "95 time percentile: " << times[TESTCASES * 0.95] << std::endl;
+    res << "90 time percentile: " << times[TESTCASES * 0.9] << std::endl;
+    res << "80 time percentile: " << times[TESTCASES * 0.8] << std::endl;
+    res << "Final average Pareto set size per task: " << sumAnsSize / TESTCASES << " (sum of sizes is " << sumAnsSize << ")" << std::endl << std::endl;
+}
 
+int main() {
+    std::ofstream res("results_bdijkstra.txt");
+    for (std::string mapName : {"NY", "BAY", "COL"}) {
+        solveForMap(mapName, res);
+    }
 }

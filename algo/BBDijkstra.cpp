@@ -127,7 +127,7 @@ ParetoSet BBDijkstra(const int n, const Graph& graph, const Graph& revGraph, con
     ParetoSet ans;
 
     for (int iteration = 0; !openSetLeft.empty() && !openSetRight.empty(); iteration++) {        
-        if (iteration % 2 == 0 && !openSetLeft.empty()) {
+        if (iteration % 2 == 0) {
             Node curNodeLeft = openSetLeft.top();
             int vleft = curNodeLeft.index;
             Distance curDistLeft = curNodeLeft.dist;
@@ -174,15 +174,15 @@ double GetCurTime() {
     return clock() * 1.0 / CLOCKS_PER_SEC;
 }
  
-int main() {
-    std::string mapName = "BAY";
-    
-    std::ifstream coordf("maps/" + mapName + "/coordinates.txt"); 
+void solveForMap(std::string mapName, std::ofstream& res) {
+    std::ifstream coordf("maps/" + mapName + "/coordinates.txt");
+ 
     int n;
     coordf >> n;
     coordf.close();
 
-    Graph graph(n), revGraph(n);
+    Graph graph(n);
+    Graph revGraph(n);
 
     std::ifstream distf("maps/" + mapName + "/distances.txt");
     std::ifstream timef("maps/" + mapName + "/time.txt");
@@ -205,18 +205,23 @@ int main() {
     distf.close();
     timef.close();
 
-    const int TESTCASES = 10;
+    const int TESTCASES = 5;
     std::mt19937 rnd(1234);
     std::ofstream outp("results/" + mapName + "/BBDijkstra.txt");
+    std::ofstream runtimes("results/" + mapName + "/BBDijkstra_runtimes.txt");
     long double sumTime = 0;
     long long sumAnsSize = 0;
+    std::vector<double> times;
     for (int i = 0; i < TESTCASES; i++) {
-        int source = rnd() % n, target = rnd() % n;
+        //int source = rnd() % (n - 60) + 30, target = source + rnd() % 60 - 30;
+        int source = rnd() % (n - 2000) + 1000, target = source + rnd() % 2000 - 1000;
         std::cerr << "Starting BBDijkstra search. Map: " << mapName << " Test #" << i + 1 << std::endl;
         double startTime = GetCurTime();
         ParetoSet ansBBDijkstra = BBDijkstra(n, graph, revGraph, source, target);
 
         double workTime = GetCurTime() - startTime;
+        times.push_back(workTime);
+        runtimes << i << ' ' << workTime << '\n';
         std::cerr << "Current task work time = " << workTime << std::endl;
         sumTime += workTime;
         sumAnsSize += ansBBDijkstra.paretoSet.size();
@@ -230,8 +235,21 @@ int main() {
         }
         outp << "\n\n\n";
     }
-    std::cerr << "\n\nResults for BBDijkstra on map '" << mapName << "'\n";
-    std::cerr << "Final average time per task: " << sumTime / TESTCASES << std::endl;
-    std::cerr << "Final average Pareto set size per task: " << sumAnsSize / TESTCASES << " (sum of sizes is " << sumAnsSize << ")" << std::endl;
+    std::sort(times.begin(), times.end());
+    res << "\n\nResults for BBDijkstra on map '" << mapName << "'\n";
+    res << "Final average time per task: " << sumTime / TESTCASES << std::endl;
+    res << "Min time per task: " << times[0] << std::endl;
+    res << "Max time per task: " << times.back() << std::endl;
+    res << "Median time per task: " << times[TESTCASES / 2] << std::endl;
+    res << "95 time percentile: " << times[TESTCASES * 0.95] << std::endl;
+    res << "90 time percentile: " << times[TESTCASES * 0.9] << std::endl;
+    res << "80 time percentile: " << times[TESTCASES * 0.8] << std::endl;
+    res << "Final average Pareto set size per task: " << sumAnsSize / TESTCASES << " (sum of sizes is " << sumAnsSize << ")" << std::endl << std::endl;
+}
 
+int main() {
+    std::ofstream res("results_bbdijkstra.txt");
+    for (std::string mapName : {"NY", "BAY", "COL"}) {
+        solveForMap(mapName, res);
+    }
 }
