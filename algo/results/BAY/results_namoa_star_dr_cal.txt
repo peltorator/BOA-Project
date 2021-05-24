@@ -1,0 +1,11 @@
+
+
+Results for NAMOA_star_dr with heuristic 'euclid' on map 'BAY'
+Final average time per task: 9.46985
+Min time per task: 0.002613
+Max time per task: 78.6086
+Median time per task: 2.06969
+95 time percentile: 63.1638
+90 time percentile: 44.1086
+80 time percentile: 14.6686
+Final average Pareto set size per task: 145 (sum of sizes is 5807)

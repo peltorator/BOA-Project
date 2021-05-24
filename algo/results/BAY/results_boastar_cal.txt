@@ -1,0 +1,11 @@
+
+
+Results for BOAStar with heuristic 'euclid' on map 'BAY'
+Final average time per task: 2.33046
+Min time per task: 0.001109
+Max time per task: 16.8218
+Median time per task: 0.731742
+95 time percentile: 12.5197
+90 time percentile: 6.40846
+80 time percentile: 4.72066
+Final average Pareto set size per task: 145 (sum of sizes is 5807)
