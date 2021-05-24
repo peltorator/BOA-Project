@@ -131,9 +131,7 @@ double GetCurTime() {
     return clock() * 1.0 / CLOCKS_PER_SEC;
 }
 
-int main() {
-    std::string mapName = "NY";
-    
+void solveForMap(std::string mapName, std::string heuristicName, std::ofstream& res) {
     std::ifstream coordf("maps/" + mapName + "/coordinates.txt"); 
 
     int n;
@@ -179,24 +177,29 @@ int main() {
     }
     distf.close();
     timef.close();
-    //std::string heuristicName = "euclid";
-    std::string heuristicName = "no_heurist";
-    //std::string heuristicName = "chebyshev";
 
-    auto h1 = [&](std::pair<int, int> a, std::pair<int, int> b) -> int {
-        return 0;
-        //long double dx = a.first - b.first;
-        //long double dy = a.second - b.second;
-        //return floor(sqrtl(dx * dx + dy * dy) / maxmult);
-        //return std::max(a.first - b.first, a.second - b.second) / maxmult;
+    std::function<int(std::pair<int, int>, std::pair<int, int>)> euclidHeuristic = [&](std::pair<int, int> a, std::pair<int, int> b) {
+        long double dx = a.first - b.first;
+        long double dy = a.second - b.second;
+        return floor(sqrtl(dx * dx + dy * dy) / maxmult);
     };
+    std::function<int(std::pair<int, int>, std::pair<int, int>)> chebyshevHeuristic = [&](std::pair<int, int> a, std::pair<int, int> b) {
+        return std::max(a.first - b.first, a.second - b.second) / maxmult;
+    };
+    std::function<int(std::pair<int, int>, std::pair<int, int>)> noHeuristic = [&](std::pair<int, int> a, std::pair<int, int> b) {
+        return 0;
+    };
+
+    auto h1 = (heuristicName == "euclid" ? euclidHeuristic : (heuristicName == "chebyshev" ? chebyshevHeuristic : noHeuristic));
+    
     auto h2 = [&](std::pair<int, int> a, std::pair<int, int> b) -> int {
         return h1(a, b) / maxspeed;
     };
 
-    const int TESTCASES = 100;
+    const int TESTCASES = 40;
     std::mt19937 rnd(1234);
     std::ofstream outp("results/" + mapName + "/BOAStar_" + heuristicName + ".txt");
+    std::ofstream runtimes("results/" + mapName + "/BOAStar_" + heuristicName + "_runtimes.txt");
     long double sumTime = 0;
     long long sumAnsSize = 0;
     std::vector<double> times;
@@ -208,6 +211,7 @@ int main() {
 
         double workTime = GetCurTime() - startTime;
         times.push_back(workTime);
+        runtimes << i << ' ' << workTime << '\n';
         std::cerr << "Current task work time = " << workTime << std::endl;
         sumTime += workTime;
         sumAnsSize += ansBOAStar.paretoSet.size();
@@ -216,19 +220,28 @@ int main() {
 
         ansBOAStar.paretoSet.sort();
         outp << "Optimal set for path from " << source + 1 << " to " << target + 1 << '\n';
-        for (const std::pair<int, int>& dist : ansBOAStar.paretoSet) {
+        for (const std::pair<long long, long long>& dist : ansBOAStar.paretoSet) {
             outp << dist.first << " " << dist.second << '\n';
         }
         outp << "\n\n\n";
     }
     std::sort(times.begin(), times.end());
-    std::cerr << "\n\nResults for BOAStar with heuristic '" << heuristicName << "' on map '" << mapName << "'\n";
-    std::cerr << "Final average time per task: " << sumTime / TESTCASES << std::endl;
-    std::cerr << "Min time per task: " << times[0] << std::endl;
-    std::cerr << "Max time per task: " << times.back() << std::endl;
-    std::cerr << "Median time per task: " << times[TESTCASES / 2] << std::endl;
-    std::cerr << "95 time percentile: " << times[TESTCASES * 0.95] << std::endl;
-    std::cerr << "90 time percentile: " << times[TESTCASES * 0.9] << std::endl;
-    std::cerr << "80 time percentile: " << times[TESTCASES * 0.8] << std::endl;
-    std::cerr << "Final average Pareto set size per task: " << sumAnsSize / TESTCASES << " (sum of sizes is " << sumAnsSize << ")" << std::endl;
+    res << "\n\nResults for BOAStar with heuristic '" << heuristicName << "' on map '" << mapName << "'\n";
+    res << "Final average time per task: " << sumTime / TESTCASES << std::endl;
+    res << "Min time per task: " << times[0] << std::endl;
+    res << "Max time per task: " << times.back() << std::endl;
+    res << "Median time per task: " << times[TESTCASES / 2] << std::endl;
+    res << "95 time percentile: " << times[TESTCASES * 0.95] << std::endl;
+    res << "90 time percentile: " << times[TESTCASES * 0.9] << std::endl;
+    res << "80 time percentile: " << times[TESTCASES * 0.8] << std::endl;
+    res << "Final average Pareto set size per task: " << sumAnsSize / TESTCASES << " (sum of sizes is " << sumAnsSize << ")" << std::endl << std::endl;
+}
+
+int main() {
+    std::ofstream res("results_boastar_cal.txt");
+    for (std::string mapName : {"NY", "BAY", "COL"}) {
+        for (std::string heuristicName : {"euclid", "chebyshev", "no_heuristic"}) {
+            solveForMap(mapName, heuristicName, res);
+        }
+    }
 }
