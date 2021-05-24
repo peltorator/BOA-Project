@@ -208,7 +208,7 @@ ParetoSet NAMOA_star(const int n,
             Open.insert(Node(u, newDist));
         }
     }
-    sols.print();
+//    sols.print();
     return sols;
 }
 

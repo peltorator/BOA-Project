@@ -222,7 +222,7 @@ ParetoSet NAMOA_star_dr(const int n,
             Open.insert(Node(u, newDist));
         }
     }
-    sols.print();
+//    sols.print();
     return sols;
 }
 
@@ -230,15 +230,12 @@ double GetCurTime() {
     return clock() * 1.0 / CLOCKS_PER_SEC;
 }
 
-int main()
-{
-    string mapName = "NY";
-
-    ifstream coordf("maps/" + mapName + "/coordinates.txt");
+void solveForMap(std::string mapName, std::string heuristicName, std::ofstream& res) {
+    std::ifstream coordf("maps/" + mapName + "/coordinates.txt");
 
     int n;
     coordf >> n;
-    vector<pair<int, int>> coordinates(n);
+    std::vector<std::pair<int, int>> coordinates(n);
     for (int i = 0; i < n; i++) {
         int index;
         coordf >> index;
@@ -252,14 +249,16 @@ int main()
     long double maxspeed = 0;
     long double maxmult = 0;
 
-    ifstream distf("maps/" + mapName + "/distances.txt");
-    ifstream timef("maps/" + mapName + "/time.txt");
+    std::ifstream distf("maps/" + mapName + "/distances.txt");
+    std::ifstream timef("maps/" + mapName + "/time.txt");
     int m;
     distf >> m;
     for (int i = 0; i < m; i++) {
-        int from, to, length;
+        int from, to;
+        long long length;
         distf >> from >> to >> length;
-        int from2, to2, time;
+        int from2, to2;
+        long long time;
         timef >> from2 >> to2 >> time;
         assert(from2 == from && to2 == to);
 
@@ -268,57 +267,80 @@ int main()
         long long dx = coordinates[from].first - coordinates[to].first;
         long long dy = coordinates[from].second - coordinates[to].second;
         if (length != 0) {
-            maxmult = max(maxmult, sqrtl(dx * dx + dy * dy) / static_cast<long double>(length));
+            maxmult = std::max(maxmult, sqrtl(dx * dx + dy * dy) / static_cast<long double>(length));
         }
         if (time != 0) {
-            maxspeed = max(maxspeed, static_cast<long double>(length) / static_cast<long double>(time));
+            maxspeed = std::max(maxspeed, static_cast<long double>(length) / static_cast<long double>(time));
         }
         graph.addEdge(Edge(from, to, {length, time}));
     }
     distf.close();
     timef.close();
-    string heuristicName = "euclid";
-    //string heuristicName = "no_heurist";
-    //string heuristicName = "chebyshev";
 
-    auto h1 = [&](pair<int, int> a, pair<int, int> b) -> int {
-        //return 0;
+    std::function<int(std::pair<int, int>, std::pair<int, int>)> euclidHeuristic = [&](std::pair<int, int> a, std::pair<int, int> b) {
         long double dx = a.first - b.first;
         long double dy = a.second - b.second;
         return floor(sqrtl(dx * dx + dy * dy) / maxmult);
-        //return max(a.first - b. first, a.second - b.second) / maxmult;
     };
-    auto h2 = [&](pair<int, int> a, pair<int, int> b) -> int {
+    std::function<int(std::pair<int, int>, std::pair<int, int>)> chebyshevHeuristic = [&](std::pair<int, int> a, std::pair<int, int> b) {
+        return std::max(a.first - b.first, a.second - b.second) / maxmult;
+    };
+    std::function<int(std::pair<int, int>, std::pair<int, int>)> noHeuristic = [&](std::pair<int, int> a, std::pair<int, int> b) {
+        return 0;
+    };
+
+    auto h1 = (heuristicName == "euclid" ? euclidHeuristic : (heuristicName == "chebyshev" ? chebyshevHeuristic : noHeuristic));
+
+    auto h2 = [&](std::pair<int, int> a, std::pair<int, int> b) -> int {
         return h1(a, b) / maxspeed;
     };
 
-    const int TESTCASES = 1;
-    mt19937 rnd(1234);
-    ofstream outp("results/" + mapName + "/NAMOA*dr_" + heuristicName + ".txt");
+    const int TESTCASES = 40;
+    std::mt19937 rnd(1234);
+    std::ofstream outp("results/" + mapName + "/NAMOA_star_dr_" + heuristicName + ".txt");
+    std::ofstream runtimes("results/" + mapName + "/NAMOA_star_dr_" + heuristicName + "_runtimes.txt");
     long double sumTime = 0;
     long long sumAnsSize = 0;
+    std::vector<double> times;
     for (int i = 0; i < TESTCASES; i++) {
         int source = rnd() % n, target = rnd() % n;
-//        int source = 0, target = 8;
-        cerr << "Starting NAMOA*dr search. Map: " << mapName << ", Heuristic: " << heuristicName << " Test #" << i + 1 << endl;
+        std::cerr << "Starting NAMOA_star_dr search. Map: " << mapName << ", Heuristic: " << heuristicName << " Test #" << i + 1 << std::endl;
         double startTime = GetCurTime();
         ParetoSet ansNAMOA_star_dr = NAMOA_star_dr(n, graph, source, target, coordinates, h1, h2);
 
         double workTime = GetCurTime() - startTime;
-        cerr << "Current task work time = " << workTime << endl;
+        times.push_back(workTime);
+        runtimes << i << ' ' << workTime << '\n';
+        std::cerr << "Current task work time = " << workTime << std::endl;
         sumTime += workTime;
         sumAnsSize += ansNAMOA_star_dr.paretoSet.size();
-        cerr << "Current average time per task: " << sumTime / (i + 1) << endl;
-        cerr << "Current average Pareto set size per task: " << sumAnsSize / (i + 1) << endl;
+        std::cerr << "Current average time per task: " << sumTime / (i + 1) << std::endl;
+        std::cerr << "Current average Pareto set size per task: " << sumAnsSize / (i + 1) << std::endl;
 
         ansNAMOA_star_dr.paretoSet.sort();
         outp << "Optimal set for path from " << source + 1 << " to " << target + 1 << '\n';
-        for (const pair<int, int>& dist : ansNAMOA_star_dr.paretoSet) {
+        for (const std::pair<long long, long long>& dist : ansNAMOA_star_dr.paretoSet) {
             outp << dist.first << " " << dist.second << '\n';
         }
         outp << "\n\n\n";
     }
-    cerr << "\n\nResults for NAMOA*dr with heuristic '" << heuristicName << "' on map '" << mapName << "'\n";
-    cerr << "Final average time per task: " << sumTime / TESTCASES << endl;
-    cerr << "Final average Pareto set size per task: " << sumAnsSize / TESTCASES << " (sum of sizes is " << sumAnsSize << ")" << endl;
+    std::sort(times.begin(), times.end());
+    res << "\n\nResults for NAMOA_star_dr with heuristic '" << heuristicName << "' on map '" << mapName << "'\n";
+    res << "Final average time per task: " << sumTime / TESTCASES << std::endl;
+    res << "Min time per task: " << times[0] << std::endl;
+    res << "Max time per task: " << times.back() << std::endl;
+    res << "Median time per task: " << times[TESTCASES / 2] << std::endl;
+    res << "95 time percentile: " << times[TESTCASES * 0.95] << std::endl;
+    res << "90 time percentile: " << times[TESTCASES * 0.9] << std::endl;
+    res << "80 time percentile: " << times[TESTCASES * 0.8] << std::endl;
+    res << "Final average Pareto set size per task: " << sumAnsSize / TESTCASES << " (sum of sizes is " << sumAnsSize << ")" << std::endl << std::endl;
+}
+
+int main() {
+    std::ofstream res("results_namoa_star_dr_cal.txt");
+    for (std::string mapName : {"NY", "BAY", "COL"}) {
+        for (std::string heuristicName : {"euclid", "chebyshev", "no_heuristic"}) {
+            solveForMap(mapName, heuristicName, res);
+        }
+    }
 }
