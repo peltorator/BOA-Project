@@ -79,6 +79,14 @@ struct ParetoSet {
         }
         paretoSet = newParetoSet;
     }
+
+    void print() {
+        cerr << "ParetoSet" << endl << "ParetoSet size: " << paretoSet.size() << endl << "Paths:" << endl;
+        for (const auto paretoDist : paretoSet) {
+            cerr << paretoDist.first << ' ' << paretoDist.second << endl;
+        }
+        cerr << endl;
+    }
 };
 
 struct Edge {
@@ -130,9 +138,11 @@ struct Node {
     }
 };
 
-bool NodeComparator (const Node& first, const Node& second) {
-    return make_pair(first.dist.f1, first.dist.f2) > make_pair(second.dist.f1, second.dist.f2);
-}
+struct NodeComparator {
+    bool operator() (const Node& first, const Node& second) const {
+        return std::make_pair(first.dist.f1, first.dist.f2) > std::make_pair(second.dist.f1, second.dist.f2);
+    }
+};
 
 ParetoSet NAMOA_star(const int n,
                      const Graph& graph,
@@ -146,16 +156,17 @@ ParetoSet NAMOA_star(const int n,
     auto h2 = [&] (const int idx) { return heuristic2(coords[idx], coords[goal]); };
 
     ParetoSet sols;
-    map<int, ParetoSet> Gop;
-    map<int, ParetoSet> Gcl;
+    vector<ParetoSet> Gop(n);
+    vector<ParetoSet> Gcl(n);
     Gop[start].add({0, 0});
 
-    std::set<Node, decltype(NodeComparator)*> Open(NodeComparator);
+    set<Node, NodeComparator> Open;
     Open.insert(Node(start, Distance(0, h1(start), 0, h2(start))));
 
     while (!Open.empty()) {
         Node s = *Open.begin();
         int v = s.index;
+
         Distance curDist = s.dist;
         pair<int, int> g_value = {s.dist.g1, s.dist.g2};
         Open.erase(Open.begin());
@@ -164,12 +175,14 @@ ParetoSet NAMOA_star(const int n,
         Gcl[v].push(g_value);
 
         if (v == goal) {
-            sols.push(g_value);
+            sols.add(g_value);
+            set<Node, NodeComparator> newOpen;
             for (auto u: Open) {
-                if (s < u) {
-                    Open.erase(u);
+                if (!(s < u)) {
+                    newOpen.insert(u);
                 }
             }
+            Open = newOpen;
             continue;
         }
 
@@ -177,7 +190,6 @@ ParetoSet NAMOA_star(const int n,
             int u = e.to;
             Distance newDist(curDist.g1 + e.cost.first, h1(u), curDist.g2 + e.cost.second, h2(u));
 
-            bool worse_way = false;
             if (Gop[u].dominates({newDist.g1, newDist.g2})) {
                 continue;
             }
@@ -197,6 +209,7 @@ ParetoSet NAMOA_star(const int n,
             Open.insert(Node(u, newDist));
         }
     }
+    sols.print();
     return sols;
 }
 
@@ -260,7 +273,7 @@ int main()
         long double dx = a.first - b.first;
         long double dy = a.second - b.second;
         return floor(sqrtl(dx * dx + dy * dy) / maxmult);
-        //return std::max(a.first - b.first, a.second - b.second) / maxmult;
+        //return std::max(a.first - b. first, a.second - b.second) / maxmult;
     };
     auto h2 = [&](std::pair<int, int> a, std::pair<int, int> b) -> int {
         return h1(a, b) / maxspeed;
@@ -268,30 +281,31 @@ int main()
 
     const int TESTCASES = 1;
     std::mt19937 rnd(1234);
-    std::ofstream outp("results/" + mapName + "/BOAStar_" + heuristicName + ".txt");
+    std::ofstream outp("results/" + mapName + "/NAMOA_star_" + heuristicName + ".txt");
     long double sumTime = 0;
     long long sumAnsSize = 0;
     for (int i = 0; i < TESTCASES; i++) {
-        int source = rnd() % n, target = rnd() % n;
-        std::cerr << "Starting BOAStar search. Map: " << mapName << ", Heuristic: " << heuristicName << " Test #" << i + 1 << std::endl;
+//        int source = rnd() % n, target = rnd() % n;
+        int source = 0, target = 8;
+        std::cerr << "Starting NAMOA_star search. Map: " << mapName << ", Heuristic: " << heuristicName << " Test #" << i + 1 << std::endl;
         double startTime = GetCurTime();
-        ParetoSet ansBOAStar = NAMOA_star(n, graph, source, target, coordinates, h1, h2);
+        ParetoSet ansNAMOA_star = NAMOA_star(n, graph, source, target, coordinates, h1, h2);
 
         double workTime = GetCurTime() - startTime;
         std::cerr << "Current task work time = " << workTime << std::endl;
         sumTime += workTime;
-        sumAnsSize += ansBOAStar.paretoSet.size();
+        sumAnsSize += ansNAMOA_star.paretoSet.size();
         std::cerr << "Current average time per task: " << sumTime / (i + 1) << std::endl;
         std::cerr << "Current average Pareto set size per task: " << sumAnsSize / (i + 1) << std::endl;
 
-        ansBOAStar.paretoSet.sort();
+        ansNAMOA_star.paretoSet.sort();
         outp << "Optimal set for path from " << source + 1 << " to " << target + 1 << '\n';
-        for (const std::pair<int, int>& dist : ansBOAStar.paretoSet) {
+        for (const std::pair<int, int>& dist : ansNAMOA_star.paretoSet) {
             outp << dist.first << " " << dist.second << '\n';
         }
         outp << "\n\n\n";
     }
-    std::cerr << "\n\nResults for BOAStar with heuristic '" << heuristicName << "' on map '" << mapName << "'\n";
+    std::cerr << "\n\nResults for NAMOA_star with heuristic '" << heuristicName << "' on map '" << mapName << "'\n";
     std::cerr << "Final average time per task: " << sumTime / TESTCASES << std::endl;
     std::cerr << "Final average Pareto set size per task: " << sumAnsSize / TESTCASES << " (sum of sizes is " << sumAnsSize << ")" << std::endl;
 }
