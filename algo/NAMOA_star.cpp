@@ -79,14 +79,6 @@ struct ParetoSet {
         }
         paretoSet = newParetoSet;
     }
-
-    void print() {
-        cerr << "ParetoSet" << endl << "ParetoSet size: " << paretoSet.size() << endl << "Paths:" << endl;
-        for (const auto paretoDist : paretoSet) {
-            cerr << paretoDist.first << ' ' << paretoDist.second << endl;
-        }
-        cerr << endl;
-    }
 };
 
 struct Edge {
@@ -208,7 +200,6 @@ ParetoSet NAMOA_star(const int n,
             Open.insert(Node(u, newDist));
         }
     }
-//    sols.print();
     return sols;
 }
 
