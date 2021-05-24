@@ -65,19 +65,24 @@ struct ParetoSet {
         paretoSet.remove(g_value);
     }
 
-    void remove_worse(const pair<int, int> dist) {
+    int remove_worse(const pair<int, int> dist) {
+        int gmin = -1;
         list<pair<int, int>> newParetoSet;
         for (const auto paretoDist : paretoSet) {
             if (paretoDist.first <= dist.first && paretoDist.second <= dist.second) {
-                return;
+                return -1;
             } else if (!(paretoDist.first >= dist.first
                          && paretoDist.second >= dist.second
                          && (paretoDist.first > dist.first || paretoDist.second > dist.second ))
                     ) {
                 newParetoSet.push_back(paretoDist);
+                if (gmin == -1 || gmin > paretoDist.second) {
+                    gmin = paretoDist.second;
+                }
             }
         }
         paretoSet = newParetoSet;
+        return gmin;
     }
 
     void print() {
@@ -158,6 +163,10 @@ ParetoSet NAMOA_star_dr(const int n,
     ParetoSet sols;
     vector<ParetoSet> Gop(n);
     vector<ParetoSet> Gcl(n);
+
+    vector<int> Gcl_gmin(n, -1);
+    int sols_gmin = -1;
+
     Gop[start].add({0, 0});
 
     set<Node, NodeComparator> Open;
@@ -173,9 +182,15 @@ ParetoSet NAMOA_star_dr(const int n,
 
         Gop[v].remove(g_value);
         Gcl[v].push(g_value);
+        if (Gcl_gmin[v] == -1 || Gcl_gmin[v] > g_value.second) {
+            Gcl_gmin[v] = g_value.second;
+        }
 
         if (v == goal) {
-            sols.add(g_value);
+            if (sols_gmin == -1 || sols_gmin > g_value.second) {
+                sols_gmin = g_value.second;
+                sols.add(g_value);
+            }
             set<Node, NodeComparator> newOpen;
             for (auto u: Open) {
                 if (!(s < u)) {
@@ -194,16 +209,15 @@ ParetoSet NAMOA_star_dr(const int n,
                 continue;
             }
 
-            if (Gcl[u].dominates({newDist.g1, newDist.g2})) {
+            if (Gcl_gmin[u]!= -1 && Gcl_gmin[u] < newDist.g2) {
                 continue;
             }
 
-            if (sols.dominates({newDist.f1, newDist.f2})) {
+            if (sols_gmin != -1 && sols_gmin < newDist.f2) {
                 continue;
             }
 
-            Gcl[u].remove_worse({newDist.g1, newDist.g2});
-            Gop[u].add({newDist.g1, newDist.g2});
+            Gop[u].push({newDist.g1, newDist.g2});
 
             Open.insert(Node(u, newDist));
         }
@@ -280,31 +294,31 @@ int main()
 
     const int TESTCASES = 1;
     mt19937 rnd(1234);
-    ofstream outp("results/" + mapName + "/NAMOA*_" + heuristicName + ".txt");
+    ofstream outp("results/" + mapName + "/NAMOA*dr_" + heuristicName + ".txt");
     long double sumTime = 0;
     long long sumAnsSize = 0;
     for (int i = 0; i < TESTCASES; i++) {
         int source = rnd() % n, target = rnd() % n;
 //        int source = 0, target = 8;
-        cerr << "Starting NAMOA* search. Map: " << mapName << ", Heuristic: " << heuristicName << " Test #" << i + 1 << endl;
+        cerr << "Starting NAMOA*dr search. Map: " << mapName << ", Heuristic: " << heuristicName << " Test #" << i + 1 << endl;
         double startTime = GetCurTime();
-        ParetoSet ansNAMOA_star = NAMOA_star(n, graph, source, target, coordinates, h1, h2);
+        ParetoSet ansNAMOA_star_dr = NAMOA_star_dr(n, graph, source, target, coordinates, h1, h2);
 
         double workTime = GetCurTime() - startTime;
         cerr << "Current task work time = " << workTime << endl;
         sumTime += workTime;
-        sumAnsSize += ansNAMOA_star.paretoSet.size();
+        sumAnsSize += ansNAMOA_star_dr.paretoSet.size();
         cerr << "Current average time per task: " << sumTime / (i + 1) << endl;
         cerr << "Current average Pareto set size per task: " << sumAnsSize / (i + 1) << endl;
 
-        ansNAMOA_star.paretoSet.sort();
+        ansNAMOA_star_dr.paretoSet.sort();
         outp << "Optimal set for path from " << source + 1 << " to " << target + 1 << '\n';
-        for (const pair<int, int>& dist : ansNAMOA_star.paretoSet) {
+        for (const pair<int, int>& dist : ansNAMOA_star_dr.paretoSet) {
             outp << dist.first << " " << dist.second << '\n';
         }
         outp << "\n\n\n";
     }
-    cerr << "\n\nResults for NAMOA* with heuristic '" << heuristicName << "' on map '" << mapName << "'\n";
+    cerr << "\n\nResults for NAMOA*dr with heuristic '" << heuristicName << "' on map '" << mapName << "'\n";
     cerr << "Final average time per task: " << sumTime / TESTCASES << endl;
     cerr << "Final average Pareto set size per task: " << sumAnsSize / TESTCASES << " (sum of sizes is " << sumAnsSize << ")" << endl;
 }
